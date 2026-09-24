@@ -202,6 +202,16 @@ export default function App() {
       return;
     }
 
+    // If the board is already completely filled (e.g. from an earlier Solve),
+    // reset to original clues first so the user can watch the algorithm work!
+    const isAlreadyFull = board.every(row => row.every(val => val !== 0));
+    let baseBoard = board;
+    if (isAlreadyFull) {
+      baseBoard = cloneBoard(originalBoard);
+      setBoard(baseBoard);
+      setIsSolved(false);
+    }
+
     setIsVisualizing(true);
     vizCancelRef.current = false;
     setStatus({
@@ -209,7 +219,7 @@ export default function App() {
       text: 'Visualizing backtracking search...'
     });
 
-    const workBoard = cloneBoard(board);
+    const workBoard = cloneBoard(baseBoard);
     const generator = solveSudokuStepGenerator(workBoard);
 
     const step = () => {
@@ -218,38 +228,54 @@ export default function App() {
         return;
       }
 
-      // Execute batches of steps per frame according to speed
-      const batchSize = Math.max(1, Math.round(visualizeSpeed / 2));
+      // Batch size for fast speeds (> 15x), single-step for lower speeds
+      const batchSize = visualizeSpeed > 15 ? Math.max(1, Math.round((visualizeSpeed - 10) / 2)) : 1;
       let lastVal = null;
+      let finished = false;
+      let solvedSuccess = false;
 
       for (let i = 0; i < batchSize; i++) {
         const next = generator.next();
         if (next.done) {
-          setIsVisualizing(false);
-          if (next.value) {
-            setIsSolved(true);
-            setStatus({
-              type: 'success',
-              text: 'Visualization complete! Solution found.'
-            });
-            confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
-          } else {
-            setStatus({
-              type: 'error',
-              text: 'Visualization ended: Puzzle has no solution.'
-            });
-          }
-          return;
+          finished = true;
+          solvedSuccess = Boolean(next.value);
+          break;
         }
         lastVal = next.value;
       }
 
+      // Always commit the latest board state to React so the grid stays fully up to date
+      setBoard(cloneBoard(workBoard));
       if (lastVal) {
-        setBoard(cloneBoard(workBoard));
         setSelectedCell({ r: lastVal.r, c: lastVal.c });
       }
 
-      requestAnimationFrame(step);
+      if (finished) {
+        setIsVisualizing(false);
+        if (solvedSuccess) {
+          setIsSolved(true);
+          setSelectedCell(null);
+          setStatus({
+            type: 'success',
+            text: 'Visualization complete! Solution found.'
+          });
+          confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+        } else {
+          setStatus({
+            type: 'error',
+            text: 'Visualization ended: Puzzle has no solution.'
+          });
+        }
+        return;
+      }
+
+      // Pacing based on slider (1x to 50x)
+      if (visualizeSpeed <= 15) {
+        const delay = Math.round(250 / Math.max(1, visualizeSpeed));
+        setTimeout(() => requestAnimationFrame(step), delay);
+      } else {
+        requestAnimationFrame(step);
+      }
     };
 
     requestAnimationFrame(step);

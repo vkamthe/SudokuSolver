@@ -125,44 +125,35 @@ export function solveSudoku(board) {
 }
 
 /**
- * Generator that yields search steps for step-by-step solver visualization
+ * Generator that yields search steps for step-by-step solver visualization.
+ * Uses the MRV (Minimum Remaining Values) heuristic for realistic and efficient solving.
  */
 export function* solveSudokuStepGenerator(board) {
-  function* helper() {
-    let emptyR = -1;
-    let emptyC = -1;
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        if (board[r][c] === 0) {
-          emptyR = r;
-          emptyC = c;
-          break;
-        }
-      }
-      if (emptyR !== -1) break;
-    }
+  const cell = findBestEmptyCell(board);
+  if (!cell) {
+    return true; // All empty cells solved
+  }
 
-    if (emptyR === -1) {
+  const { r, c, validNums } = cell;
+  if (validNums.length === 0) {
+    return false; // Dead end reached
+  }
+
+  for (let i = 0; i < validNums.length; i++) {
+    const num = validNums[i];
+    board[r][c] = num;
+    yield { r, c, val: num, action: 'place' };
+
+    const solved = yield* solveSudokuStepGenerator(board);
+    if (solved) {
       return true;
     }
 
-    for (let num = 1; num <= 9; num++) {
-      if (isValidPlacement(board, emptyR, emptyC, num)) {
-        board[emptyR][emptyC] = num;
-        yield { r: emptyR, c: emptyC, val: num, action: 'place' };
-
-        const solved = yield* helper();
-        if (solved) return true;
-
-        board[emptyR][emptyC] = 0;
-        yield { r: emptyR, c: emptyC, val: 0, action: 'backtrack' };
-      }
-    }
-
-    return false;
+    board[r][c] = 0;
+    yield { r, c, val: 0, action: 'backtrack' };
   }
 
-  yield* helper();
+  return false;
 }
 
 /**
