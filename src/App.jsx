@@ -58,7 +58,7 @@ export default function App() {
 
   // Visualization state
   const [isVisualizing, setIsVisualizing] = useState(false);
-  const [visualizeSpeed, setVisualizeSpeed] = useState(15);
+  const [visualizeSpeed, setVisualizeSpeed] = useState(3); // Default to 3 (180ms/step - 10x slower)
   const vizCancelRef = useRef(false);
 
   // Status message
@@ -222,32 +222,30 @@ export default function App() {
     const workBoard = cloneBoard(baseBoard);
     const generator = solveSudokuStepGenerator(workBoard);
 
+    const SPEED_DELAYS = {
+      1: 600, // 0.6s / step (Super slow)
+      2: 350, // 0.35s / step (Slow)
+      3: 180, // 0.18s / step (Default: 10x slower than before)
+      4: 80,  // 80ms / step (Brisk)
+      5: 25   // 25ms / step (Fast)
+    };
+
     const step = () => {
       if (vizCancelRef.current) {
         setIsVisualizing(false);
         return;
       }
 
-      // Batch size for fast speeds (> 15x), single-step for lower speeds
-      const batchSize = visualizeSpeed > 15 ? Math.max(1, Math.round((visualizeSpeed - 10) / 2)) : 1;
-      let lastVal = null;
-      let finished = false;
-      let solvedSuccess = false;
-
-      for (let i = 0; i < batchSize; i++) {
-        const next = generator.next();
-        if (next.done) {
-          finished = true;
-          solvedSuccess = Boolean(next.value);
-          break;
-        }
-        lastVal = next.value;
-      }
+      // Execute 1 step per tick for crystal-clear visualization
+      const next = generator.next();
+      const finished = next.done;
+      const solvedSuccess = finished ? Boolean(next.value) : false;
+      const currentStep = next.value;
 
       // Always commit the latest board state to React so the grid stays fully up to date
       setBoard(cloneBoard(workBoard));
-      if (lastVal) {
-        setSelectedCell({ r: lastVal.r, c: lastVal.c });
+      if (currentStep) {
+        setSelectedCell({ r: currentStep.r, c: currentStep.c });
       }
 
       if (finished) {
@@ -269,13 +267,8 @@ export default function App() {
         return;
       }
 
-      // Pacing based on slider (1x to 50x)
-      if (visualizeSpeed <= 15) {
-        const delay = Math.round(250 / Math.max(1, visualizeSpeed));
-        setTimeout(() => requestAnimationFrame(step), delay);
-      } else {
-        requestAnimationFrame(step);
-      }
+      const delay = SPEED_DELAYS[visualizeSpeed] || 180;
+      setTimeout(() => requestAnimationFrame(step), delay);
     };
 
     requestAnimationFrame(step);

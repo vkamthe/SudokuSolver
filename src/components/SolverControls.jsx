@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Zap, RotateCcw, Trash2, Download, Camera, Square } from 'lucide-react';
+import { Play, Zap, RotateCcw, Trash2, Download, Camera, Square, Gauge } from 'lucide-react';
 
 export default function SolverControls({
   onSolveInstant,
@@ -53,25 +53,35 @@ export default function SolverControls({
         )}
       </div>
 
-      {/* Speed Slider (visible when visualizing) */}
-      {isVisualizing && (
-        <div className="flex items-center justify-between gap-3 p-3 bg-slate-900/80 border border-slate-800 rounded-xl text-xs">
-          <span className="text-slate-400 font-medium">Animation Speed:</span>
-          <div className="flex items-center gap-2 flex-1 max-w-[200px]">
-            <input
-              type="range"
-              min="1"
-              max="50"
-              value={visualizeSpeed}
-              onChange={(e) => onSpeedChange(Number(e.target.value))}
-              className="w-full accent-indigo-500 h-1 bg-slate-700 rounded-lg cursor-pointer"
-            />
-            <span className="font-mono text-indigo-400 w-8 text-right font-semibold">
-              {visualizeSpeed}x
-            </span>
-          </div>
+      {/* Speed Slider (Always accessible so users can pace before and during solve) */}
+      <div className="flex flex-col gap-1.5 p-3 bg-slate-900/80 border border-slate-800 rounded-xl text-xs">
+        <div className="flex items-center justify-between text-slate-300">
+          <span className="flex items-center gap-1.5 font-medium text-slate-300">
+            <Gauge className="w-3.5 h-3.5 text-indigo-400" />
+            Visualizer Pace:
+          </span>
+          <span className="font-mono text-indigo-400 font-semibold text-[11px]">
+            {visualizeSpeed === 1 && '0.6s / step (Slowest)'}
+            {visualizeSpeed === 2 && '0.35s / step (Slow)'}
+            {visualizeSpeed === 3 && '0.18s / step (10x Slower)'}
+            {visualizeSpeed === 4 && '80ms / step (Brisk)'}
+            {visualizeSpeed === 5 && '25ms / step (Fast)'}
+          </span>
         </div>
-      )}
+        <div className="flex items-center gap-2 pt-1">
+          <span className="text-[10px] text-slate-500 font-medium">Slow</span>
+          <input
+            type="range"
+            min="1"
+            max="5"
+            step="1"
+            value={visualizeSpeed}
+            onChange={(e) => onSpeedChange(Number(e.target.value))}
+            className="w-full accent-indigo-500 h-1.5 bg-slate-700 rounded-lg cursor-pointer"
+          />
+          <span className="text-[10px] text-slate-500 font-medium">Fast</span>
+        </div>
+      </div>
 
       {/* Secondary Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-800/80 text-xs">
